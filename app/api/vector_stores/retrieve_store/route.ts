@@ -1,10 +1,13 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI();
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const vectorStoreId = searchParams.get("vector_store_id");
+
+  const openai = new OpenAI({
+    baseURL: process.env.OPENAI_BASE_URL,
+  });
+
   try {
     const vectorStore = await openai.vectorStores.retrieve(
       vectorStoreId || ""

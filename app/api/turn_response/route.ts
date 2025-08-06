@@ -7,7 +7,9 @@ export async function POST(request: Request) {
     const { messages, tools } = await request.json();
     console.log("Received messages:", messages);
 
-    const openai = new OpenAI();
+    const openai = new OpenAI({
+      baseURL: process.env.OPENAI_BASE_URL,
+    });
 
     const events = await openai.responses.create({
       model: MODEL,
