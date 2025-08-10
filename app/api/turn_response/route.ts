@@ -11,13 +11,17 @@ export async function POST(request: Request) {
       baseURL: process.env.OPENAI_BASE_URL,
     });
 
-    const events = await openai.responses.create({
+    const requestPayload = {
       model: MODEL,
       input: messages,
       tools,
       stream: true,
       parallel_tool_calls: false,
-    });
+    };
+
+    console.log("[Responses API Request]", JSON.stringify(requestPayload, null, 2));
+
+    const events = await openai.responses.create(requestPayload);
 
     // Create a ReadableStream that emits SSE data
     const stream = new ReadableStream({
