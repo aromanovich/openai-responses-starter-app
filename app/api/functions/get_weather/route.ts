@@ -6,7 +6,7 @@ export async function GET(request: Request) {
 
     // 1. Get coordinates for the city
     const geoRes = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${location}&format=json`
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json`
     );
     const geoData = await geoRes.json();
 
