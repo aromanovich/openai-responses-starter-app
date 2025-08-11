@@ -233,6 +233,7 @@ export const processMessages = async () => {
             });
             conversationItems.push({
               role: "assistant",
+              type: "message",
               content: [
                 {
                   type: "output_text",

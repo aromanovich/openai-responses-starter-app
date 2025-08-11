@@ -11,9 +11,20 @@ export async function POST(request: Request) {
       baseURL: process.env.OPENAI_BASE_URL,
     });
 
+    // Filter out messages with empty content
+    const filteredMessages = messages.filter((msg: any) => {
+      if (msg.role === "assistant" && Array.isArray(msg.content)) {
+        const hasValidContent = msg.content.some((c: any) => 
+          c.text && c.text.trim().length > 0
+        );
+        return hasValidContent;
+      }
+      return true;
+    });
+
     const requestPayload = {
       model: MODEL,
-      input: messages,
+      input: filteredMessages,
       tools,
       stream: true,
       parallel_tool_calls: false,
@@ -28,6 +39,9 @@ export async function POST(request: Request) {
       async start(controller) {
         try {
           for await (const event of events) {
+            // Log all events from Responses API
+            console.log(`[Responses API Event] ${event.type}:`, JSON.stringify(event, null, 2));
+            
             // Sending all events to the client
             const data = JSON.stringify({
               event: event.type,
