@@ -1,6 +1,8 @@
 import { MODEL } from "@/config/constants";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { writeFileSync, mkdirSync, existsSync } from "fs";
+import { join } from "path";
 
 export async function POST(request: Request) {
   try {
@@ -34,6 +36,19 @@ export async function POST(request: Request) {
 
     const events = await openai.responses.create(requestPayload);
 
+    // File logging setup
+    let respId: string | null = null;
+    let logDir: string | null = null;
+    let eventsLog: string[] = [];
+
+    if (process.env.LOG_DIR) {
+      logDir = process.env.LOG_DIR;
+      // Ensure log directory exists
+      if (!existsSync(logDir)) {
+        mkdirSync(logDir, { recursive: true });
+      }
+    }
+
     // Create a ReadableStream that emits SSE data
     const stream = new ReadableStream({
       async start(controller) {
@@ -42,6 +57,26 @@ export async function POST(request: Request) {
             // Log all events from Responses API
             console.log(`\x1b[32m[Responses API Event] ${event.type}:`, JSON.stringify(event, null, 2), "\x1b[0m");
             
+            // Extract response ID from the first event and save request
+            if (!respId && event.type === "response.created" && event.response?.id) {
+              respId = event.response.id;
+              if (logDir) {
+                const reqFilePath = join(logDir, `req-${respId}.json`);
+                writeFileSync(reqFilePath, JSON.stringify(requestPayload, null, 2));
+              }
+            }
+            
+            // Collect events for logging
+            if (logDir) {
+              // Reorder fields to put "type", "sequence_number", and "output_index" first
+              const { type, sequence_number, output_index, ...rest } = event as any;
+              const reorderedEvent: any = { type };
+              if (sequence_number !== undefined) reorderedEvent.sequence_number = sequence_number;
+              if (output_index !== undefined) reorderedEvent.output_index = output_index;
+              Object.assign(reorderedEvent, rest);
+              eventsLog.push(JSON.stringify(reorderedEvent, null, 2));
+            }
+            
             // Sending all events to the client
             const data = JSON.stringify({
               event: event.type,
@@ -49,6 +84,13 @@ export async function POST(request: Request) {
             });
             controller.enqueue(`data: ${data}\n\n`);
           }
+          
+          // Save response events log
+          if (logDir && respId) {
+            const respFilePath = join(logDir, `resp-${respId}.json`);
+            writeFileSync(respFilePath, eventsLog.join('\n\n'));
+          }
+          
           // End of stream
           controller.close();
         } catch (error) {
