@@ -153,7 +153,8 @@ export const processMessages = async () => {
     ...conversationItems,
   ];
 
-  let assistantMessageContent = "";
+  // Store content for each message by ID
+  const messageContentMap = new Map<string, string>();
   let functionArguments = "";
   // For streaming MCP tool call arguments
   let mcpArguments = "";
@@ -168,16 +169,19 @@ export const processMessages = async () => {
         if (typeof delta === "string") {
           partial = delta;
         }
-        assistantMessageContent += partial;
 
-        // If the last message isn't an assistant message, create a new one
+        // Check if this is a new message first, before updating content
         const lastItem = chatMessages[chatMessages.length - 1];
-        if (
+        const isNewMessage = (
           !lastItem ||
           lastItem.type !== "message" ||
           lastItem.role !== "assistant" ||
           (lastItem.id && lastItem.id !== item_id)
-        ) {
+        );
+
+        if (isNewMessage) {
+          // Initialize content for new message
+          messageContentMap.set(item_id, partial);
           chatMessages.push({
             type: "message",
             role: "assistant",
@@ -185,14 +189,18 @@ export const processMessages = async () => {
             content: [
               {
                 type: "output_text",
-                text: assistantMessageContent,
+                text: partial,
               },
             ],
           } as MessageItem);
         } else {
+          // Continue existing message
+          const currentContent = messageContentMap.get(item_id) || "";
+          const newContent = currentContent + partial;
+          messageContentMap.set(item_id, newContent);
           const contentItem = lastItem.content[0];
           if (contentItem && contentItem.type === "output_text") {
-            contentItem.text = assistantMessageContent;
+            contentItem.text = newContent;
             if (annotation) {
               contentItem.annotations = [
                 ...(contentItem.annotations ?? []),

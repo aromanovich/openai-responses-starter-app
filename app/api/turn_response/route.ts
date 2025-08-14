@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       parallel_tool_calls: false,
     };
 
-    console.log("[Responses API Request]", JSON.stringify(requestPayload, null, 2));
+    console.log("\x1b[34m[Responses API Request]", JSON.stringify(requestPayload, null, 2), "\x1b[0m");
 
     const events = await openai.responses.create(requestPayload);
 
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         try {
           for await (const event of events) {
             // Log all events from Responses API
-            console.log(`[Responses API Event] ${event.type}:`, JSON.stringify(event, null, 2));
+            console.log(`\x1b[32m[Responses API Event] ${event.type}:`, JSON.stringify(event, null, 2), "\x1b[0m");
             
             // Sending all events to the client
             const data = JSON.stringify({
